@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="kitchensink">
+<head>
+
+
+<meta charset="utf-8">
+<title>画像編集</title>
+
+<meta name="viewport" content="height=device-height, width=device-width , user-scalable=yes , minimum-scale=0.5 , maximum-scale=1.3" />
+
+<script src="jquery.js"></script>
+
+<link rel="stylesheet" href="popup/jquery.remodal.css">
+<link rel="stylesheet" href="style.css">
+
+
+<!--[if lt IE 9]>
+      <script src="excanvas.js"></script>
+<![endif]-->
+
+<!-- キャンバスの操作ライブラリ -->
+<script src="fabric.js"></script>
+<script src="paster.js"></script>
+<script src="angular.min.js"></script>
+
+</head>
+<body>
+
+<div id="bd-wrapper" ng-controller="CanvasControls">
+	<!--[if IE]><script src="../lib/fonts/Delicious.font.js"></script><![endif]-->
+	
+	<div id="canvas-wrapper">
+		<!-- header要素 -->
+		<header role="banner">
+			<a href="#add" onclick="noback_js(this)">
+				<img style="background-position: center; background-image: url(./icon/ic_add_white_54px.png); background-repeat: no-repeat;">
+			</a>
+			
+			<span id="color-opacity-controls" ng-show="canvas.getActiveObject()">
+			<a href="#edit" onclick="noback_js(this)">
+				<img style="background-position: center; background-image: url(./icon/ic_mode_edit_white_54px.png); background-repeat: no-repeat;">
+			</span>
+			<a>
+				<img class="fingermode" onclick="fingermodechange(this);" style="background-position: center; background-image: url(./icon/ic_gesture_white_54px.png); background-repeat: no-repeat;" >
+				<input type="text" id="fingermode_v" value="1" style="display:none;">
+			</a>
+			
+			<a>
+				<img onclick="myPreView(this);" style="background-position: center; background-image: url(./icon/ic_visibility_white_54px.png); background-repeat: no-repeat;">
+			</a>
+		</header>
+		
+		
+		<div id="main">
+			<div id="Block-top">
+				<h2>編集画面</h2>
+				<div id="canvas-controls"></div>
+				<canvas id="c" width="720" height="960" style=""></canvas>
+			</div>
+			<div id="Block">
+				<!-- プレビュー -->
+				<h2>プレビュー</h2>
+				<div>
+					<form method="post" action="url" enctype="multipart/form-data">
+						<div class="cropped">
+							<h3> ▽▽タッチすると確定します▽▽ </h3>
+						</div>
+					</form>
+				</div>
+			</div><!-- /#Block -->
+			
+		</div>
+		<script>
+			var kitchensink = { };
+			var canvas = new fabric.Canvas('c');
+			canvas.setBackgroundColor('rgba(255, 255, 255, 1.0)', canvas.renderAll.bind(canvas));
+		</script>
+		
+		<!-- footer要素 -->
+		<!-- My Code-->
+		<div class="footer">
+			<script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.js"></script>
+			<!-- Footer UpToDown -->
+			<script type="text/javascript" src="./js/function/fingermodechange.js"></script>
+		</div>
+		
+		<!-- オブジェクトの追加 -->
+		<div class="remodal" data-remodal-id="add">
+			<div id="uploadiconarea" class="btn-group-add">
+				<button id="uploadicon" title="Text-upload" onclick="location.href='#';myAddText()">文字</button>
+				<button id="uploadicon" onclick="location.href='#'; $('#imgLoader').click();" title="Image-upload">画像</button>
+				<button id="uploadicon" onclick="location.href='#bg_image';$('#bg_image_v').val('1');bg_read();" title="Stamp-upload">背景</button>
+				<button id="uploadicon" onclick="location.href='#st_image';$('#st_image_v').val('1');st_read();" title="Stamp-upload">スタンプ</button>
+			</div>
+		</div>
+		
+		<!-- オブジェクトの編集 -->
+		<div class="remodal" data-remodal-id="edit">
+			<div id="area" style="display:none;"></div>
+			<div id="color-opacity-controls" ng-show="canvas.getActiveObject()">
+			<div id="text-wrapper" ng-show="getText()">	
+				<div id="text-controls">
+					<textarea id="activetextarea" bind-value-to="text"></textarea>
+					
+					<button type="button" class="btn btn-object-action" ng-click="toggleBold()" ng-class="{'btn-inverse': isBold()}">太字</button>
+					<button type="button" class="btn btn-object-action" id="text-cmd-italic" ng-click="toggleItalic()" ng-class="{'btn-inverse': isItalic()}">斜体</button>
+
+					<button type="button" onclick="location.href='#font_popup'">フォント</button>
+					<input type="text" id="fontfamily" name="font-family" class="btn-object-action" bind-value-to="fontFamily" value="HG創英角ｺﾞｼｯｸUB" style="display:none;">
+
+					<BR>
+					
+					<p>色</p>
+					<input id="fill" type="color" bind-value-to="fill">
+					<p>枠線</p>
+					<input id="stroke-color" type="color" value="" id="text-stroke-color" class="btn-object-action" bind-value-to="strokeColor">
+					<!-- font size -->
+					<div class="btn-font-group">
+						<div class="input-group" style="text-align: left; padding:3px; padding-left : 10px;">
+							<p id="text-controller-title">文字サイズ:</p>
+							<div class="slider-wrapper" style="width:200px; height:20px; padding:10px; padding-bottom:0px;">
+								<input type="text" class="js-hiderange" bind-value-to="fontSize"  />
+							</div>
+						</div>
+					</div>
+					
+					</div>
+					</div>
+					<!-- opacity-->
+					<div class="btn-font-group">
+						<div class="input-group" style="text-align: left; padding:3px; padding-left : 10px;">
+							<p id="text-controller-title">透明度:</p>
+							<div class="slider-wrapper" style="width:200px; height:20px; padding:10px; padding-bottom:0px;">
+								<input type="text" class="js-hiderange2" bind-value-to="opacity"  />
+							</div>
+						</div>
+					</div>
+					
+					<div id="tobutton">
+						<button id="send-to-back" class="btn btn-object-action" ng-click="sendToBack()">奥にする</button>
+						<button id="bring-forward" class="btn btn-object-action" ng-click="bringForward()">手前にする</button>
+						<button class="btn btn-object-action" onclick="location.href='#';" id="remove-selected" ng-click="removeSelected()">削除</button><br>
+						<button id="shadowify" class="btn btn-object-action" ng-click="shadowify()">影をつける</button>
+						<button id="clip" class="btn btn-object-action" ng-click="clip()">円に切り取る</button>
+				</div>
+			</div>
+		</div><!-- edit -->
+		
+		<!-- 画像の追加 -->
+		<input type="file" id="imgLoader" style="display:none;">
+		
+		<!-- popupQuery Remodal -->
+		<script src="./popup/jquery.remodal.min.js"></script>
+		
+		<link rel="stylesheet" type="text/css" href="range/powerange.css">
+		<!-- slider の実装-->
+		<script src="range/powerange.js"></script>
+		<script type="text/javascript">
+			// Hide range.
+			var hide = document.querySelector('.js-hiderange');
+			var initHideRange = new Powerange(hide,  { hideRange: true, min: 1, max:120, start: 60 });
+		</script>
+		<script type="text/javascript">
+			// Hide range.
+			var hide2 = document.querySelector('.js-hiderange2');
+			var initHideRange = new Powerange(hide2,  { hideRange: true, min: 1, max:100, start: 100 });
+		</script>
+		<!-- テキストエリアのサイズを自動調整 -->
+		<script type="text/javascript" src="./js/function/textarearesize.js"></script>
+		
+		<style>
+			
+		</style>
+		
+		<script type="text/javascript" src="./js/function/padLeft.js"></script>
+		<script type="text/javascript" src="./js/function/pop_next_back.js"></script>
+		
+		<input type="text" id="image_step" value="9" style="display:none;">
+		
+		<!-- 背景追加のポップアップ -->
+		<div class="remodal" id="bg_image_id" data-remodal-id="bg_image">
+			<input type="text" id="bg_image_v" value="1" style="display:none;">
+			<input type="text" id="bg_image_min" value="1" style="display:none;">
+			<input type="text" id="bg_image_max" value="9" style="display:none;">
+			
+			<span class="bg_pop_span"></span>
+			<ul class="flex-direction-nav"><li><a class="flex-prev" href="#back" onclick="bg_back_p();">Previous</a></li><li><a class="flex-next" href="#next" onclick="bg_next_p();">Next</a></li></ul>
+			
+		</div>
+		
+		<!-- スタンプのポップアップ -->
+		<div class="remodal" id="st_image_id" data-remodal-id="st_image">
+			<input type="text" id="st_image_v" value="1" style="display:none;">
+			<input type="text" id="st_image_min" value="1" style="display:none;">
+			<input type="text" id="st_image_max" value="9" style="display:none;">
+			<span class="st_pop_span"></span>
+			<ul class="flex-direction-nav"><li>
+				<a class="flex-prev" href="#back" onclick="st_back_p();">Previous</a>
+			</li><li>
+				<a class="flex-next" href="#next" onclick="st_next_p();">Next</a>
+			</li></ul>
+		</div>
+		
+		<!-- FONTの選択 -->
+		<div class="remodal" data-remodal-id="font_popup">
+			<span class="font_popup_div">
+				<a id="font_popup_a" href="#">
+				</a>
+			</span>
+		</div>
+		
+		<script src="jquery.browser.sp.js"></script>
+		<!--使えそうなＦＯＮＴの判定-->
+		<script type="text/javascript" src="./js/function/install-font.js"></script>
+		
+		<script src="utils.js"></script>
+		<script src="app_config.js"></script>
+		<script src="controller.js"></script>
+		
+	</div>
+</div>
+
+<!-- 画像追加(ユーザーがファイルを指定する) -->
+<!-- プレビュー -->
+<!-- 画像追加(スタンプを使う) -->
+<!-- 画像追加(背景を使う) -->
+<!-- テキスト追加 -->
+<!-- ブラウザのバックボタンの履歴に登録しない -->
+<!-- ＦＯＮＴをつける -->
+<script type="text/javascript" src="./js/function/canvas-fanc.js"></script>
+</body>
+</html>
